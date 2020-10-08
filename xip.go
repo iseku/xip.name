@@ -43,6 +43,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/miekg/dns"
@@ -52,9 +53,10 @@ var (
 	verbose = flag.Bool("v", false, "Verbose")
 	fqdn    = flag.String("fqdn", "xip.name.", "FQDN to handle")
 	addr    = flag.String("addr", ":53", "The addr to bind on")
-	ip      = flag.String("ip", "188.166.43.179", "The IP of xip.name")
+	ip      = flag.String("ip", "172.16.71.3", "The default IP of xip.name")
 
 	ipPattern = regexp.MustCompile(`(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`)
+	sslipPattern = regexp.MustCompile(`(\b\d{1,3}\-\d{1,3}\-\d{1,3}\-\d{1,3})`)
 	defaultIP net.IP
 )
 
@@ -65,6 +67,7 @@ func main() {
 
 	// Ensure that a FQDN is passed in (often the trailing . is omitted)
 	*fqdn = dns.Fqdn(*fqdn)
+	fmt.Println(*fqdn)
 
 	dns.HandleFunc(*fqdn, handleDNS)
 
@@ -169,7 +172,10 @@ func dnsRR(name string) (rr *dns.A) {
 
 	if ipStr := ipPattern.FindString(name); ipStr != "" {
 		rr.A = net.ParseIP(ipStr).To4()
-	}
+	} else if ipStr := sslipPattern.FindString(name); ipStr != "" {
+		ipStr := strings.Replace(ipStr, "-", ".", -1)
+                rr.A = net.ParseIP(ipStr).To4()
+        }
 
 	return rr
 }
